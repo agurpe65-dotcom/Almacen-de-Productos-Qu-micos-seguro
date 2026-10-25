@@ -1,0 +1,1047 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Almacén Químico Seguro</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+/* Layout: una sola pantalla. Barra superior con título, grupo y botones; debajo, productos a la izquierda (lista con scroll propio)
+   y a la derecha el armario de baldas (A, B, C por filas 1 y 2) con el armario E de inflamables debajo.
+   Se mantiene la identidad visual original (tarjeta blanca sobre degradado violeta), una sola apariencia clara. */
+:root {
+  --ink: #2d3748;
+  --muted: #5a6678;
+  --line: #cbd5e0;
+  --card: #ffffff;
+  --panel: #f7fafc;
+  --fila-sup: #edf2f7;
+  --fila-inf: #e1e7f2;
+  --accent: #5a67d8;
+  --accent-strong: #434fb8;
+  --fondo-a: #667eea;
+  --fondo-b: #764ba2;
+
+  --c-acid-l: #c53030;
+  --c-acid-s: #9b2c2c;
+  --c-base-l: #2b6cb0;
+  --c-base-s: #2c5282;
+  --c-inerte-l: #2f855a;
+  --c-inerte-s: #276749;
+  --c-inflamable-l: #c05621;
+
+  --e-borde: #c05621;
+  --e-fondo: #fffaf0;
+
+  --nivel-excelente: #2f855a;
+  --nivel-bien: #2b6cb0;
+  --nivel-suficiente: #c05621;
+  --nivel-insuficiente: #c53030;
+
+  --liquido-bg: #bee3f8;
+  --liquido-fg: #2c5282;
+  --solido-bg: #fbd38d;
+  --solido-fg: #7c2d12;
+  --alerta-bg: #fff5f5;
+  --alerta-borde: #fc8181;
+  --parcial-bg: #fffaf0;
+  --parcial-borde: #ed8936;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  font-size: 16px;
+  background: linear-gradient(135deg, var(--fondo-a) 0%, var(--fondo-b) 100%);
+  background-color: var(--fondo-a);
+  color: var(--ink);
+  min-height: 100vh;
+  padding-block: 12px;
+  padding-left: max(12px, env(safe-area-inset-left, 0px));
+  padding-right: max(12px, env(safe-area-inset-right, 0px));
+}
+
+button { font-family: inherit; }
+
+:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+
+.container {
+  max-width: 1500px;
+  margin: 0 auto;
+  background: var(--card);
+  border-radius: 16px;
+  padding: clamp(12px, 2vw, 20px);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+}
+
+/* ---------- Barra superior ---------- */
+.barra {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 20px;
+  padding-bottom: 12px;
+  margin-bottom: 14px;
+  border-bottom: 3px solid var(--accent);
+}
+
+.barra-titulo { min-width: 0; }
+
+h1 {
+  color: var(--ink);
+  font-size: clamp(1.3rem, 2.6vw, 1.8rem);
+  margin-bottom: 2px;
+  text-wrap: balance;
+}
+
+.subtitle { color: var(--muted); font-size: 0.9rem; }
+
+.barra-acciones { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; }
+
+.grupo-selector { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; }
+.grupo-selector label { font-weight: 700; font-size: 0.9rem; color: var(--ink); white-space: nowrap; }
+
+.grupo-selector input {
+  padding: 7px 12px;
+  font-size: 0.95rem;
+  font-family: inherit;
+  color: var(--ink);
+  background: var(--card);
+  border: 2px solid var(--accent);
+  border-radius: 8px;
+  width: min(230px, 100%);
+}
+
+.controles { display: flex; flex-wrap: wrap; gap: 8px; }
+
+.btn {
+  padding: 9px 14px;
+  font-size: 0.9rem;
+  font-weight: bold;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  color: #fff;
+  transition: transform 0.2s, box-shadow 0.2s, background 0.2s;
+}
+.btn:hover { transform: translateY(-1px); }
+.btn-evaluar { background: var(--accent); }
+.btn-evaluar:hover { background: var(--accent-strong); box-shadow: 0 4px 12px rgba(90, 103, 216, 0.4); }
+.btn-limpiar { background: #c53030; }
+.btn-limpiar:hover { background: #9b2c2c; }
+.btn-limpiar.confirmar { background: #742a2a; box-shadow: 0 0 0 3px rgba(197, 48, 48, 0.4); }
+.btn-copiar { background: #2f855a; }
+.btn-copiar:hover { background: #276749; }
+
+/* ---------- Espacio de trabajo ---------- */
+.workspace {
+  display: grid;
+  grid-template-columns: minmax(250px, 32%) minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
+  gap: 16px;
+  height: max(560px, calc(100vh - 190px));
+}
+
+/* ---------- Catálogo ---------- */
+.productos-panel {
+  background: var(--panel);
+  padding: 12px;
+  border-radius: 12px;
+  overflow-y: auto;
+  min-width: 0;
+  min-height: 0;
+}
+
+.productos-panel h2 { text-align: center; font-size: 1.05rem; color: var(--ink); }
+
+.ayuda {
+  text-align: center;
+  color: var(--muted);
+  font-size: 0.82rem;
+  line-height: 1.35;
+  margin: 4px 0 12px;
+}
+
+.categoria { margin-bottom: 12px; }
+
+.categoria-titulo {
+  font-weight: bold;
+  font-size: 0.8rem;
+  padding: 5px 9px;
+  border-radius: 6px;
+  margin-bottom: 6px;
+  color: #fff;
+  background: var(--tipo);
+}
+
+.cat-items { display: flex; flex-wrap: wrap; gap: 6px; }
+
+.cat-acido-L { --tipo: var(--c-acid-l); }
+.cat-acido-S { --tipo: var(--c-acid-s); }
+.cat-base-L { --tipo: var(--c-base-l); }
+.cat-base-S { --tipo: var(--c-base-s); }
+.cat-inerte-L { --tipo: var(--c-inerte-l); }
+.cat-inerte-S { --tipo: var(--c-inerte-s); }
+.cat-inflamable-L { --tipo: var(--c-inflamable-l); }
+
+.producto {
+  background: var(--card);
+  padding: 5px 9px;
+  border-radius: 8px;
+  cursor: grab;
+  border: 2px solid #e2e8f0;
+  border-left: 5px solid var(--tipo);
+  font-size: 0.82rem;
+  line-height: 1.3;
+  transition: box-shadow 0.2s;
+}
+
+.producto:hover { box-shadow: 0 3px 10px rgba(0, 0, 0, 0.18); }
+.producto.dragging { opacity: 0.5; }
+.producto.seleccionado { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(90, 103, 216, 0.35); }
+
+.producto-nombre { font-weight: bold; color: var(--ink); }
+.producto-formula { color: var(--muted); font-size: 0.78rem; margin-left: 4px; }
+
+.estado-badge {
+  display: inline-block;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 0.7rem;
+  font-weight: bold;
+  white-space: nowrap;
+}
+.liquido { background: var(--liquido-bg); color: var(--liquido-fg); }
+.solido { background: var(--solido-bg); color: var(--solido-fg); }
+
+/* ---------- Almacén ---------- */
+.almacen {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: var(--fila-sup);
+  padding: 12px;
+  border-radius: 12px;
+  border: 3px dashed var(--line);
+  min-width: 0;
+  min-height: 0;
+}
+
+.almacen-cabecera {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 4px 16px;
+}
+
+.almacen-titulo { font-size: 1.15rem; font-weight: bold; color: var(--ink); }
+.contador { color: var(--muted); font-size: 0.88rem; font-variant-numeric: tabular-nums; }
+
+.armario { flex: 1 1 0; min-height: 0; display: flex; flex-direction: column; gap: 8px; }
+
+.fila {
+  flex: 1 1 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 10px 10px;
+  border-radius: 10px;
+}
+.fila-sup { background: var(--fila-sup); }
+.fila-inf { background: var(--fila-inf); }
+
+.fila-titulo {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 2px 12px;
+  font-size: 0.74rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+}
+
+.fila-rango { font-weight: 600; text-transform: none; letter-spacing: 0; }
+
+.fila-baldas {
+  flex: 1 1 0;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-rows: minmax(0, 1fr);
+  gap: 10px;
+}
+
+.balda {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  background: var(--card);
+  border-radius: 10px;
+  border: 2px solid var(--line);
+  overflow: hidden;
+}
+
+.balda-label {
+  flex: none;
+  background: var(--accent);
+  color: #fff;
+  padding: 3px 10px;
+  font-weight: bold;
+  font-size: 0.8rem;
+}
+
+.balda-items { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 6px; }
+
+.balda.drag-over { background: #e6fffa; border-color: #2c7a7b; border-style: solid; }
+body.modo-colocar .balda { border-style: dashed; border-color: var(--accent); cursor: pointer; }
+
+.armario-e {
+  flex: none;
+  background: var(--e-fondo);
+  border: 3px solid var(--e-borde);
+  border-radius: 10px;
+  overflow: hidden;
+  padding: 0 10px 10px;
+}
+
+.armario-e-banda {
+  height: 10px;
+  margin: 0 -10px 6px;
+  background: repeating-linear-gradient(135deg, var(--e-borde) 0 14px, #fbd38d 14px 28px);
+}
+
+.armario-e .fila-titulo { color: #7c2d12; margin-bottom: 6px; }
+.armario-e .balda { border-color: var(--e-borde); min-height: 84px; max-height: 150px; }
+.armario-e .balda-label { background: var(--e-borde); }
+body.modo-colocar .armario-e .balda { border-color: var(--e-borde); }
+.armario-e .balda-items { display: flex; flex-wrap: wrap; gap: 6px; align-content: flex-start; }
+
+.colocado {
+  display: block;
+  background: var(--card);
+  padding: 5px 28px 5px 8px;
+  margin: 0 0 5px;
+  border-radius: 8px;
+  border: 2px solid var(--tipo);
+  position: relative;
+  font-size: 0.8rem;
+  line-height: 1.3;
+}
+
+.armario-e .colocado { display: inline-block; margin: 0; }
+
+.colocado-nombre { font-weight: bold; color: var(--ink); overflow-wrap: anywhere; }
+.colocado-formula { color: var(--muted); font-size: 0.76rem; overflow-wrap: anywhere; }
+
+.btn-eliminar {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  background: #e53e3e;
+  color: #fff;
+  border: none;
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  cursor: pointer;
+  font-weight: bold;
+  font-size: 0.8rem;
+  line-height: 1;
+}
+
+.resumen {
+  display: block;
+  width: 100%;
+  max-width: 760px;
+  margin: 16px auto 0;
+  min-height: 210px;
+  padding: 14px;
+  font-family: Consolas, 'Courier New', monospace;
+  font-size: 0.85rem;
+  color: var(--ink);
+  background: var(--panel);
+  border: 2px solid var(--line);
+  border-radius: 10px;
+}
+
+/* ---------- Resultados ---------- */
+.resultados { background: var(--panel); padding: clamp(16px, 3vw, 30px); border-radius: 15px; margin-top: 20px; }
+.resultados h2 { text-align: center; color: var(--ink); margin-bottom: 16px; overflow-wrap: anywhere; }
+
+.puntuacion-total {
+  text-align: center;
+  font-size: clamp(2rem, 7vw, 3rem);
+  font-weight: bold;
+  color: var(--accent-strong);
+  margin-bottom: 24px;
+  font-variant-numeric: tabular-nums;
+}
+
+.parcial {
+  background: var(--parcial-bg);
+  border: 2px solid var(--parcial-borde);
+  border-radius: 10px;
+  padding: 14px 18px;
+  margin-bottom: 16px;
+  color: var(--ink);
+}
+
+.criterio-resultado { background: var(--card); padding: 18px 20px; margin: 14px 0; border-radius: 10px; border-left: 5px solid; }
+.criterio-resultado.excelente { border-color: var(--nivel-excelente); }
+.criterio-resultado.bien { border-color: var(--nivel-bien); }
+.criterio-resultado.suficiente { border-color: var(--nivel-suficiente); }
+.criterio-resultado.insuficiente { border-color: var(--nivel-insuficiente); }
+
+.criterio-titulo { font-weight: bold; font-size: 1.15rem; margin-bottom: 8px; color: var(--ink); }
+
+.criterio-puntos {
+  display: inline-block;
+  background: var(--accent);
+  color: #fff;
+  padding: 4px 14px;
+  border-radius: 20px;
+  font-weight: bold;
+  margin-left: 10px;
+  white-space: nowrap;
+}
+
+.criterio-feedback { color: var(--muted); margin-top: 8px; line-height: 1.6; max-width: 75ch; }
+
+.alertas { background: var(--alerta-bg); border: 2px solid var(--alerta-borde); border-radius: 10px; padding: 18px; margin-top: 20px; }
+.alertas h3 { color: #c53030; margin-bottom: 12px; }
+.alerta-item { padding: 10px; margin: 8px 0; background: var(--card); border-left: 4px solid #e53e3e; border-radius: 5px; color: var(--ink); }
+
+.calificacion { text-align: center; margin-top: 28px; padding: 20px; background: var(--fila-sup); border-radius: 10px; }
+.calificacion h3 { color: var(--ink); margin-bottom: 10px; }
+.calificacion p { font-size: 1.2rem; color: var(--muted); }
+
+.aviso {
+  position: fixed;
+  top: calc(16px + env(safe-area-inset-top, 0px));
+  right: max(16px, env(safe-area-inset-right, 0px));
+  left: max(16px, env(safe-area-inset-left, 0px));
+  margin-left: auto;
+  max-width: 380px;
+  background: #276749;
+  color: #fff;
+  padding: 16px 22px;
+  border-radius: 10px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+  z-index: 20;
+  animation: entra 0.3s;
+}
+.aviso.aviso-warn { background: #9c4221; }
+
+@keyframes entra { from { opacity: 0; transform: translateY(-12px); } to { opacity: 1; transform: translateY(0); } }
+
+/* Pantallas muy estrechas (móvil): se apila y la página hace scroll */
+@media (max-width: 640px) {
+  .workspace { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto; height: auto; }
+  .productos-panel { max-height: 340px; }
+  .almacen { overflow: visible; }
+  .armario, .fila { flex: none; }
+  .fila-baldas { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto; }
+  .balda { min-height: 96px; }
+  .armario-e .balda { max-height: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { animation: none !important; transition: none !important; }
+}
+</style>
+
+<div class="container">
+  <header class="barra">
+    <div class="barra-titulo">
+      <h1>🧪 Almacén Químico Seguro</h1>
+      <p class="subtitle">Organiza los productos químicos priorizando la seguridad y la incompatibilidad</p>
+    </div>
+    <div class="barra-acciones">
+      <div class="grupo-selector">
+        <label for="nombre-grupo">Nombre del Grupo:</label>
+        <input type="text" id="nombre-grupo" placeholder="Ej: Grupo 1 - Los Químicos" autocomplete="off">
+      </div>
+      <div class="controles">
+        <button type="button" class="btn btn-limpiar" id="btn-limpiar">🗑️ Limpiar Todo</button>
+        <button type="button" class="btn btn-evaluar" id="btn-evaluar">📊 Evaluar Almacén</button>
+        <button type="button" class="btn btn-copiar" id="btn-copiar">📋 Copiar Resumen</button>
+      </div>
+    </div>
+  </header>
+
+  <div class="workspace">
+    <div class="productos-panel">
+      <h2>Productos Disponibles</h2>
+      <p class="ayuda" id="ayuda" aria-live="polite">Arrastra cada producto a una balda. También puedes tocarlo y después tocar la balda.</p>
+      <div id="lista-productos"></div>
+    </div>
+
+    <div class="almacen">
+      <div class="almacen-cabecera">
+        <h2 class="almacen-titulo">🏭 Mi Almacén Virtual</h2>
+        <p class="contador" id="contador">0 de 24 productos colocados</p>
+      </div>
+
+      <div class="armario">
+        <section class="fila fila-sup" aria-labelledby="fila-sup-titulo">
+          <h3 class="fila-titulo" id="fila-sup-titulo"><span>Baldas superiores</span><span class="fila-rango">A1 · B1 · C1</span></h3>
+          <div class="fila-baldas" id="fila-1"></div>
+        </section>
+
+        <section class="fila fila-inf" aria-labelledby="fila-inf-titulo">
+          <h3 class="fila-titulo" id="fila-inf-titulo"><span>Baldas inferiores</span><span class="fila-rango">A2 · B2 · C2</span></h3>
+          <div class="fila-baldas" id="fila-2"></div>
+        </section>
+      </div>
+
+      <section class="armario-e" aria-labelledby="armario-e-titulo">
+        <div class="armario-e-banda" aria-hidden="true"></div>
+        <h3 class="fila-titulo" id="armario-e-titulo"><span>Armario de inflamables</span><span class="fila-rango">E · solo inflamables</span></h3>
+        <div id="armario-e"></div>
+      </section>
+    </div>
+  </div>
+
+  <label for="resumen" class="ayuda" id="resumen-label" hidden style="display:block;margin-top:16px">Resumen del diseño (selecciónalo y cópialo si el botón no lo ha copiado):</label>
+  <textarea class="resumen" id="resumen" readonly hidden></textarea>
+
+  <div class="resultados" id="resultados" hidden></div>
+</div>
+
+<div class="aviso" id="aviso" role="status" aria-live="polite" hidden></div>
+
+<script>
+/*LOGICA-INICIO*/
+const TOTAL_PRODUCTOS = 24;
+const CLAVES = ['A1', 'B1', 'C1', 'A2', 'B2', 'C2', 'E'];
+/* Posición [columna, fila] de cada balda. E es un armario aparte y no está en la rejilla. */
+const POS = { A1: [0, 0], B1: [1, 0], C1: [2, 0], A2: [0, 1], B2: [1, 1], C2: [2, 1] };
+const colDe = k => k.charAt(0);
+const nombreBalda = k => (k === 'E' ? 'el armario E' : 'la balda ' + k);
+const TITULOS_CRITERIOS = [
+  'Separación Ácidos-Bases',
+  'Gestión de Inflamables Líquidos',
+  'Uso Estratégico de Inertes',
+  'Organización por Estado Físico'
+];
+
+function posiciones(data) {
+  const r = {
+    total: 0, acido: [], base: [], inerte: [], inflamable: [], oxidante: [],
+    enE: { inflamables: 0, otros: [], oxidantes: 0 },
+    estados: { acido: { L: [], S: [] }, base: { L: [], S: [] }, inerte: { L: [], S: [] } }
+  };
+  Object.keys(data).forEach(k => {
+    data[k].forEach(p => {
+      r.total++;
+      if (k === 'E') {
+        if (p.fam === 'inflamable') r.enE.inflamables++;
+        else {
+          r.enE.otros.push(p);
+          if (p.ox) r.enE.oxidantes++;
+        }
+        return;
+      }
+      r[p.fam].push(k);
+      if (p.ox) r.oxidante.push(k);
+      if (r.estados[p.fam]) r.estados[p.fam][p.est].push(k);
+    });
+  });
+  return r;
+}
+
+function evaluarSeparacionAcidosBases(r) {
+  if (!r.acido.length || !r.base.length) {
+    return {
+      puntos: 2, nivel: 'suficiente',
+      feedback: 'Faltan ácidos o bases en las baldas A1 a C2, así que la separación no se puede comprobar.'
+    };
+  }
+  const colAcidos = new Set(r.acido.map(colDe));
+  const colBases = new Set(r.base.map(colDe));
+  const ok = colAcidos.size === 1 && colBases.size === 1 &&
+    ((colAcidos.has('A') && colBases.has('C')) || (colAcidos.has('C') && colBases.has('A')));
+  if (ok) {
+    return {
+      puntos: 4, nivel: 'excelente',
+      feedback: '✅ Excelente separación: los ácidos y las bases están en columnas opuestas (A y C), con la columna B entre ambas. Esto previene reacciones exotérmicas peligrosas en caso de derrame.'
+    };
+  }
+  const lista = a => [...new Set(a)].join(', ');
+  return {
+    puntos: 1, nivel: 'insuficiente',
+    feedback: '❌ Separación insuficiente: los ácidos deben estar todos en una columna extrema (A o C) y las bases todas en la otra. Ahora los ácidos están en ' + lista(r.acido) + ' y las bases en ' + lista(r.base) + '.'
+  };
+}
+
+function evaluarInflamables(r) {
+  const fuera = r.inflamable;
+  const intrusos = r.enE.otros;
+  if (!r.enE.inflamables && !fuera.length) {
+    return { puntos: 2, nivel: 'suficiente', feedback: 'No se han colocado productos inflamables para evaluar.' };
+  }
+  if (!fuera.length && !intrusos.length) {
+    return {
+      puntos: 4, nivel: 'excelente',
+      feedback: '✅ Gestión excelente: todos los inflamables están en el armario E, separados del resto de productos.'
+    };
+  }
+  const fallos = [];
+  if (fuera.length) fallos.push('hay inflamables fuera del armario E (en ' + [...new Set(fuera)].join(', ') + ')');
+  if (intrusos.length) fallos.push('el armario E contiene productos que no son inflamables (' + intrusos.map(p => p.n).join(', ') + ')');
+  return {
+    puntos: 1, nivel: 'insuficiente',
+    feedback: '❌ Gestión deficiente: el armario E es solo para inflamables y debe contenerlos todos. En concreto, ' + fallos.join(' y ') + '.'
+  };
+}
+
+function evaluarUsoInertes(r) {
+  const enE = r.enE.otros.filter(p => p.fam === 'inerte');
+  if (!r.inerte.length && !enE.length) {
+    return {
+      puntos: 1, nivel: 'insuficiente',
+      feedback: '❌ No se han colocado productos inertes. Los inertes deben ir en la columna B, como barrera entre ácidos y bases.'
+    };
+  }
+  const fuera = r.inerte.filter(k => colDe(k) !== 'B');
+  if (!fuera.length && !enE.length) {
+    return {
+      puntos: 4, nivel: 'excelente',
+      feedback: '✅ Uso excelente de inertes: todos están en la columna B, entre los ácidos y las bases, y hacen de barrera de seguridad.'
+    };
+  }
+  const donde = [...new Set(fuera)];
+  if (enE.length) donde.push('E');
+  return {
+    puntos: 1, nivel: 'insuficiente',
+    feedback: '❌ Uso deficiente: todos los inertes deben estar en la columna B (B1 y B2) para actuar como barrera. Ahora hay inertes en ' + donde.join(', ') + '.'
+  };
+}
+
+function evaluarEstadoFisico(r) {
+  let total = 0;
+  const solidosAbajo = [], liquidosArriba = [];
+  ['acido', 'base', 'inerte'].forEach(f => {
+    r.estados[f].S.forEach(k => {
+      total++;
+      if (POS[k][1] !== 0) solidosAbajo.push(k);
+    });
+    r.estados[f].L.forEach(k => {
+      total++;
+      if (POS[k][1] !== 1) liquidosArriba.push(k);
+    });
+  });
+  if (!total) {
+    return {
+      puntos: 2, nivel: 'suficiente',
+      feedback: 'Para valorar el estado físico hay que colocar ácidos, bases o inertes en las baldas A1 a C2.'
+    };
+  }
+  const lista = a => [...new Set(a)].join(', ');
+  const fallos = [];
+  if (solidosAbajo.length) fallos.push('hay sólidos en la fila inferior (' + lista(solidosAbajo) + ')');
+  if (liquidosArriba.length) fallos.push('hay líquidos en la fila superior (' + lista(liquidosArriba) + ')');
+  const detalle = fallos.length ? ' En concreto, ' + fallos.join(' y ') + '.' : '';
+  if (!fallos.length) {
+    return {
+      puntos: 4, nivel: 'excelente',
+      feedback: '✅ Excelente organización: todos los sólidos están en las baldas superiores (fila 1) y todos los líquidos en las inferiores (fila 2). Así, si un líquido gotea, no alcanza a los sólidos.'
+    };
+  }
+  return {
+    puntos: 1, nivel: 'insuficiente',
+    feedback: '❌ Organización deficiente: hay productos en la fila contraria. Los sólidos van en la fila superior (1) y los líquidos en la inferior (2), para que un derrame no alcance a los sólidos.' + detalle
+  };
+}
+
+function alertasSeguridad(data) {
+  const alertas = [];
+  Object.keys(data).forEach(k => {
+    const ps = data[k];
+    const donde = nombreBalda(k);
+    if (ps.some(p => p.fam === 'acido') && ps.some(p => p.fam === 'base')) {
+      alertas.push('⚠️ PELIGRO: ' + donde + ' contiene ácidos y bases juntos. Riesgo de reacción exotérmica violenta.');
+    }
+    if (ps.some(p => p.fam === 'inflamable') && ps.some(p => p.ox)) {
+      alertas.push('⚠️ PELIGRO: ' + donde + ' contiene inflamables y ácidos oxidantes. Riesgo grave de incendio.');
+    }
+    if (k === 'E' && ps.some(p => p.fam !== 'inflamable')) {
+      alertas.push('⚠️ ATENCIÓN: el armario E es solo para inflamables y contiene ' +
+        ps.filter(p => p.fam !== 'inflamable').map(p => p.n).join(', ') + '.');
+    }
+  });
+  return alertas;
+}
+
+function calificacion(total) {
+  if (total >= 14) return '✅ <strong>Excelente</strong> - Almacén seguro y bien organizado';
+  if (total >= 13) return '👍 <strong>Bien</strong> - Cumple criterios básicos de seguridad';
+  if (total >= 10) return '⚠️ <strong>Suficiente</strong> - Necesita mejoras importantes';
+  return '❌ <strong>Insuficiente</strong> - Riesgos graves de seguridad';
+}
+
+function evaluarTodo(data) {
+  const r = posiciones(data);
+  const criterios = [
+    evaluarSeparacionAcidosBases(r),
+    evaluarInflamables(r),
+    evaluarUsoInertes(r),
+    evaluarEstadoFisico(r)
+  ];
+  const total = criterios.reduce((s, c) => s + c.puntos, 0);
+  return { r, criterios, total, alertas: alertasSeguridad(data) };
+}
+/*LOGICA-FIN*/
+
+/* ---------- Datos del catálogo ---------- */
+const PRODUCTOS = [
+  { id: 1, n: 'Ácido sulfúrico', f: 'H₂SO₄', fam: 'acido', est: 'L', ox: true },
+  { id: 2, n: 'Ácido clorhídrico', f: 'HCl', fam: 'acido', est: 'L' },
+  { id: 3, n: 'Ácido nítrico', f: 'HNO₃', fam: 'acido', est: 'L', ox: true },
+  { id: 4, n: 'Ácido acético', f: 'CH₃COOH', fam: 'acido', est: 'L' },
+  { id: 5, n: 'Ácido oxálico', f: 'C₂H₂O₄', fam: 'acido', est: 'S' },
+  { id: 6, n: 'Ácido cítrico', f: 'C₆H₈O₇', fam: 'acido', est: 'S' },
+  { id: 7, n: 'Ácido benzoico', f: 'C₇H₆O₂', fam: 'acido', est: 'S' },
+  { id: 8, n: 'Ácido tartárico', f: 'C₄H₆O₆', fam: 'acido', est: 'S' },
+  { id: 9, n: 'Hidróxido de sodio', f: 'NaOH (disolución)', fam: 'base', est: 'L' },
+  { id: 10, n: 'Amoníaco', f: 'NH₃', fam: 'base', est: 'L' },
+  { id: 11, n: 'Hidróxido de potasio', f: 'KOH (disolución)', fam: 'base', est: 'L' },
+  { id: 12, n: 'Hidróxido de amonio', f: 'NH₄OH', fam: 'base', est: 'L' },
+  { id: 13, n: 'Hidróxido de sodio', f: 'NaOH', fam: 'base', est: 'S' },
+  { id: 14, n: 'Hidróxido de potasio', f: 'KOH', fam: 'base', est: 'S' },
+  { id: 15, n: 'Hidróxido de calcio', f: 'Ca(OH)₂', fam: 'base', est: 'S' },
+  { id: 16, n: 'Carbonato de sodio', f: 'Na₂CO₃', fam: 'base', est: 'S' },
+  { id: 17, n: 'Agua destilada', f: 'H₂O', fam: 'inerte', est: 'L' },
+  { id: 18, n: 'Glicerina', f: 'C₃H₈O₃', fam: 'inerte', est: 'L' },
+  { id: 19, n: 'Cloruro de sodio', f: 'NaCl', fam: 'inerte', est: 'S' },
+  { id: 20, n: 'Arena de sílice', f: 'SiO₂', fam: 'inerte', est: 'S' },
+  { id: 21, n: 'Etanol', f: 'C₂H₅OH', fam: 'inflamable', est: 'L' },
+  { id: 22, n: 'Acetona', f: 'CH₃COCH₃', fam: 'inflamable', est: 'L' },
+  { id: 23, n: 'Tolueno', f: 'C₇H₈', fam: 'inflamable', est: 'L' },
+  { id: 24, n: 'Hexano', f: 'C₆H₁₄', fam: 'inflamable', est: 'L' }
+];
+
+const CATEGORIAS = [
+  { fam: 'acido', est: 'L', titulo: 'Ácidos Líquidos' },
+  { fam: 'acido', est: 'S', titulo: 'Ácidos Sólidos' },
+  { fam: 'base', est: 'L', titulo: 'Bases Líquidas' },
+  { fam: 'base', est: 'S', titulo: 'Bases Sólidas' },
+  { fam: 'inerte', est: 'L', titulo: 'Inertes Líquidos' },
+  { fam: 'inerte', est: 'S', titulo: 'Inertes Sólidos' },
+  { fam: 'inflamable', est: 'L', titulo: 'Inflamables Líquidos' }
+];
+
+const TEXTO_AYUDA = 'Arrastra cada producto a una balda. También puedes tocarlo y después tocar la balda.';
+const almacenData = {};
+CLAVES.forEach(k => { almacenData[k] = []; });
+
+let arrastrandoId = null;
+let seleccionadoId = null;
+let temporizadorAviso = null;
+let temporizadorLimpiar = null;
+
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const porId = id => PRODUCTOS.find(p => p.id === Number(id));
+const claseCat = p => 'cat-' + p.fam + '-' + p.est;
+const textoEstado = p => (p.est === 'L' ? 'Líquido' : 'Sólido');
+const contarColocados = () => Object.values(almacenData).reduce((s, b) => s + b.length, 0);
+const nombreGrupo = () => $('nombre-grupo').value.trim() || 'Sin nombre';
+
+function aviso(texto, tipo) {
+  const el = $('aviso');
+  el.textContent = texto;
+  el.className = 'aviso' + (tipo ? ' ' + tipo : '');
+  el.hidden = false;
+  clearTimeout(temporizadorAviso);
+  temporizadorAviso = setTimeout(() => { el.hidden = true; }, 3800);
+}
+
+/* ---------- Construcción de la interfaz ---------- */
+function crearProducto(p) {
+  const el = document.createElement('div');
+  el.className = 'producto ' + claseCat(p);
+  el.draggable = true;
+  el.tabIndex = 0;
+  el.setAttribute('role', 'button');
+  el.setAttribute('aria-label', p.n + ', ' + p.f + ', ' + textoEstado(p).toLowerCase());
+  el.dataset.id = p.id;
+
+  const nombre = document.createElement('span');
+  nombre.className = 'producto-nombre';
+  nombre.textContent = p.n;
+  const formula = document.createElement('span');
+  formula.className = 'producto-formula';
+  formula.textContent = p.f;
+  el.append(nombre, formula);
+
+  el.addEventListener('dragstart', e => {
+    arrastrandoId = p.id;
+    el.classList.add('dragging');
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', String(p.id));
+  });
+  el.addEventListener('dragend', () => el.classList.remove('dragging'));
+  el.addEventListener('click', () => seleccionar(p.id));
+  el.addEventListener('keydown', e => {
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); seleccionar(p.id); }
+  });
+  return el;
+}
+
+function crearBalda(clave) {
+  const el = document.createElement('div');
+  el.className = 'balda';
+  el.dataset.balda = clave;
+  el.tabIndex = 0;
+  const descripcion = clave === 'E' ? 'Armario E de inflamables'
+    : 'Balda ' + clave + (clave.charAt(1) === '1' ? ', fila superior' : ', fila inferior');
+  el.setAttribute('aria-label', descripcion);
+
+  const etiqueta = document.createElement('div');
+  etiqueta.className = 'balda-label';
+  etiqueta.textContent = clave;
+  const items = document.createElement('div');
+  items.className = 'balda-items';
+  el.append(etiqueta, items);
+
+  el.addEventListener('dragover', e => { e.preventDefault(); el.classList.add('drag-over'); e.dataTransfer.dropEffect = 'move'; });
+  el.addEventListener('dragleave', () => el.classList.remove('drag-over'));
+  el.addEventListener('drop', e => {
+    e.preventDefault();
+    el.classList.remove('drag-over');
+    const id = arrastrandoId || e.dataTransfer.getData('text/plain');
+    arrastrandoId = null;
+    if (id) colocar(id, clave);
+  });
+  el.addEventListener('click', () => { if (seleccionadoId) colocar(seleccionadoId, clave); });
+  el.addEventListener('keydown', e => {
+    if (e.target === el && (e.key === 'Enter' || e.key === ' ') && seleccionadoId) {
+      e.preventDefault();
+      colocar(seleccionadoId, clave);
+    }
+  });
+  return el;
+}
+
+function construir() {
+  const lista = $('lista-productos');
+  CATEGORIAS.forEach(cat => {
+    const sec = document.createElement('div');
+    sec.className = 'categoria';
+    const titulo = document.createElement('div');
+    titulo.className = 'categoria-titulo cat-' + cat.fam + '-' + cat.est;
+    titulo.textContent = cat.titulo;
+    const items = document.createElement('div');
+    items.className = 'cat-items';
+    PRODUCTOS.filter(p => p.fam === cat.fam && p.est === cat.est).forEach(p => items.appendChild(crearProducto(p)));
+    sec.append(titulo, items);
+    lista.appendChild(sec);
+  });
+  ['A', 'B', 'C'].forEach(col => $('fila-1').appendChild(crearBalda(col + '1')));
+  ['A', 'B', 'C'].forEach(col => $('fila-2').appendChild(crearBalda(col + '2')));
+  $('armario-e').appendChild(crearBalda('E'));
+  actualizarContador();
+}
+
+/* ---------- Acciones ---------- */
+function elementoCatalogo(id) {
+  return document.querySelector('.productos-panel .producto[data-id="' + id + '"]');
+}
+
+function seleccionar(id) {
+  const anterior = document.querySelector('.producto.seleccionado');
+  if (anterior) anterior.classList.remove('seleccionado');
+  if (seleccionadoId === Number(id)) {
+    limpiarSeleccion();
+    return;
+  }
+  seleccionadoId = Number(id);
+  const el = elementoCatalogo(id);
+  if (el) el.classList.add('seleccionado');
+  document.body.classList.add('modo-colocar');
+  $('ayuda').textContent = 'Seleccionado: ' + porId(id).n + ' (' + porId(id).f + '). Toca la balda donde quieres colocarlo.';
+}
+
+function limpiarSeleccion() {
+  seleccionadoId = null;
+  document.body.classList.remove('modo-colocar');
+  const sel = document.querySelector('.producto.seleccionado');
+  if (sel) sel.classList.remove('seleccionado');
+  $('ayuda').textContent = TEXTO_AYUDA;
+}
+
+function actualizarContador() {
+  $('contador').textContent = contarColocados() + ' de ' + TOTAL_PRODUCTOS + ' productos colocados';
+}
+
+function ocultarResultados() {
+  $('resultados').hidden = true;
+}
+
+function colocar(id, clave) {
+  const p = porId(id);
+  if (!p) return;
+  const yaColocado = Object.values(almacenData).some(b => b.some(x => x.id === p.id));
+  if (yaColocado) return;
+
+  almacenData[clave].push(p);
+
+  const el = document.createElement('div');
+  el.className = 'colocado ' + claseCat(p);
+  el.dataset.id = p.id;
+
+  const nombre = document.createElement('span');
+  nombre.className = 'colocado-nombre';
+  nombre.textContent = p.n;
+  const badge = document.createElement('span');
+  badge.className = 'estado-badge ' + (p.est === 'L' ? 'liquido' : 'solido');
+  badge.textContent = p.est === 'L' ? 'Líq.' : 'Sól.';
+  const formula = document.createElement('span');
+  formula.className = 'colocado-formula';
+  formula.textContent = p.f;
+  const quitar = document.createElement('button');
+  quitar.type = 'button';
+  quitar.className = 'btn-eliminar';
+  quitar.textContent = '×';
+  quitar.setAttribute('aria-label', 'Quitar ' + p.n + ' (' + p.f + ') de ' + nombreBalda(clave));
+  quitar.addEventListener('click', e => { e.stopPropagation(); quitarProducto(p.id); });
+  el.append(nombre, document.createTextNode(' '), badge, document.createTextNode(' '), formula, quitar);
+
+  document.querySelector('.balda[data-balda="' + clave + '"] .balda-items').appendChild(el);
+  const enCatalogo = elementoCatalogo(p.id);
+  if (enCatalogo) enCatalogo.hidden = true;
+
+  limpiarSeleccion();
+  actualizarContador();
+  ocultarResultados();
+}
+
+function quitarProducto(id) {
+  Object.keys(almacenData).forEach(k => {
+    almacenData[k] = almacenData[k].filter(x => x.id !== Number(id));
+  });
+  const colocado = document.querySelector('.colocado[data-id="' + id + '"]');
+  if (colocado) colocado.remove();
+  const enCatalogo = elementoCatalogo(id);
+  if (enCatalogo) enCatalogo.hidden = false;
+  actualizarContador();
+  ocultarResultados();
+}
+
+function vaciarAlmacen() {
+  document.querySelectorAll('.colocado').forEach(el => el.remove());
+  document.querySelectorAll('.producto').forEach(el => { el.hidden = false; });
+  Object.keys(almacenData).forEach(k => { almacenData[k] = []; });
+  limpiarSeleccion();
+  actualizarContador();
+  ocultarResultados();
+  $('resumen').hidden = true;
+  $('resumen-label').hidden = true;
+}
+
+function restablecerBotonLimpiar() {
+  clearTimeout(temporizadorLimpiar);
+  temporizadorLimpiar = null;
+  const b = $('btn-limpiar');
+  b.textContent = '🗑️ Limpiar Todo';
+  b.classList.remove('confirmar');
+}
+
+function pedirLimpiar() {
+  if (!contarColocados()) { aviso('El almacén ya está vacío.', 'aviso-warn'); return; }
+  if (temporizadorLimpiar === null) {
+    const b = $('btn-limpiar');
+    b.textContent = '¿Seguro? Pulsa otra vez';
+    b.classList.add('confirmar');
+    temporizadorLimpiar = setTimeout(restablecerBotonLimpiar, 4000);
+    return;
+  }
+  restablecerBotonLimpiar();
+  vaciarAlmacen();
+  aviso('Almacén vaciado.');
+}
+
+function evaluarAlmacen() {
+  if (!contarColocados()) {
+    aviso('Coloca productos en el almacén antes de evaluar.', 'aviso-warn');
+    return;
+  }
+  const ev = evaluarTodo(almacenData);
+  const parcial = ev.r.total < TOTAL_PRODUCTOS
+    ? '<div class="parcial"><strong>Evaluación parcial:</strong> has colocado ' + ev.r.total + ' de ' + TOTAL_PRODUCTOS + ' productos. Los que faltan no se tienen en cuenta en la puntuación.</div>'
+    : '';
+  const criterios = ev.criterios.map((c, i) =>
+    '<div class="criterio-resultado ' + c.nivel + '">' +
+      '<div class="criterio-titulo">' + (i + 1) + '. ' + TITULOS_CRITERIOS[i] +
+        '<span class="criterio-puntos">' + c.puntos + '/4</span></div>' +
+      '<div class="criterio-feedback">' + esc(c.feedback) + '</div>' +
+    '</div>'
+  ).join('');
+  const alertas = ev.alertas.length
+    ? '<div class="alertas"><h3>⚠️ Alertas de Seguridad</h3>' +
+      ev.alertas.map(a => '<div class="alerta-item">' + esc(a) + '</div>').join('') + '</div>'
+    : '';
+
+  const cont = $('resultados');
+  cont.innerHTML =
+    '<h2>Resultados de Evaluación: ' + esc(nombreGrupo()) + '</h2>' +
+    '<div class="puntuacion-total">' + ev.total + ' / 16 puntos</div>' +
+    parcial + criterios + alertas +
+    '<div class="calificacion"><h3>Calificación Final</h3><p>' + calificacion(ev.total) + '</p></div>';
+  cont.hidden = false;
+  cont.scrollIntoView({ behavior: 'smooth' });
+}
+
+function textoResumen() {
+  const ev = evaluarTodo(almacenData);
+  const lineas = ['Almacén Químico Seguro - ' + nombreGrupo(), new Date().toLocaleString('es-ES'), ''];
+  CLAVES.forEach(k => {
+    const items = almacenData[k].map(p => p.n + ' (' + p.f + ', ' + textoEstado(p).toLowerCase() + ')');
+    lineas.push((k === 'E' ? 'Armario E' : 'Balda ' + k) + ': ' + (items.length ? items.join(', ') : 'vacía'));
+  });
+  lineas.push('', 'Productos colocados: ' + ev.r.total + ' de ' + TOTAL_PRODUCTOS);
+  lineas.push('Puntuación: ' + ev.total + ' / 16');
+  ev.criterios.forEach((c, i) => lineas.push((i + 1) + '. ' + TITULOS_CRITERIOS[i] + ': ' + c.puntos + '/4'));
+  return lineas.join('\n');
+}
+
+function copiarResumen() {
+  if (!contarColocados()) {
+    aviso('Coloca productos en el almacén antes de copiar el resumen.', 'aviso-warn');
+    return;
+  }
+  const texto = textoResumen();
+  const area = $('resumen');
+  area.value = texto;
+  area.hidden = false;
+  $('resumen-label').hidden = false;
+  const alternativa = () => {
+    area.focus();
+    area.select();
+    aviso('Selecciona el texto del recuadro y cópialo con Ctrl+C.', 'aviso-warn');
+  };
+  try {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(texto).then(
+        () => aviso('Resumen copiado. Ya puedes pegarlo en tu entrega.'),
+        alternativa
+      );
+    } else {
+      alternativa();
+    }
+  } catch (e) {
+    alternativa();
+  }
+}
+
+construir();
+$('btn-limpiar').addEventListener('click', pedirLimpiar);
+$('btn-evaluar').addEventListener('click', evaluarAlmacen);
+$('btn-copiar').addEventListener('click', copiarResumen);
+</script>
+
+</body></html>
